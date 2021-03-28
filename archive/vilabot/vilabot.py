@@ -4,17 +4,17 @@ import re
 from random import randint
 
 from telegram import Message, MessageEntity
-from telegram.ext import Updater, CommandHandler, MessageHandler, BaseFilter, Filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, MessageFilter, Filters
 
-from telebot.bot import TeleBot
-from telebot.proxy import Proxy, lock_start, lock_awake
-from telebot.layer import Layer, with_info
-from telebot.filters import Mention
-from telebot.botlib import start_logging, load, stdwar, stderr, stdout
+from botele.bot import TeleBot
+from botele.proxy import Proxy, lock_start, lock_awake
+from botele.layer import Layer, with_info
+from botele.filters import Mention
+from botele.botlib import start_logging, load_token
 
-TOKEN = load('vilabot.token')
+TOKEN = load_token('vilabot.token')
 
-class MoonEmoji(BaseFilter):
+class MoonEmoji(MessageFilter):
 
     MOONS = ['🌝','🌕','🌗','🌘','🌖','🌙','🌛','🌚','🌑','🌓','🌒','🌔','☪','☾','☽']
 

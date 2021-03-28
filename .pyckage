@@ -1,1 +1,54 @@
-{"description": null, "version": "0.1.0", "package": "telebot", "author": "Pedro Maciel Xavier", "path": "C:\\Users\\Pedro\\gits\\telebot", "pathlog": [["DIR", "C:\\Users\\Pedro\\gits\\telebot\\src"], ["DIR", "C:\\Users\\Pedro\\gits\\telebot\\src\\telebot"], ["FILE", "C:\\Users\\Pedro\\gits\\telebot\\src\\telebot\\__init__.py"], ["DIR", "C:\\Users\\Pedro\\gits\\telebot\\bin"], ["FILE", "C:\\Users\\Pedro\\gits\\telebot\\bin\\telebot"], ["DIR", "C:\\Users\\Pedro\\gits\\telebot\\docs"], ["DIR", "C:\\Users\\Pedro\\gits\\telebot\\data"], ["FILE", "C:\\Users\\Pedro\\gits\\telebot\\setup.py"], ["FILE", "C:\\Users\\Pedro\\gits\\telebot\\setup.cfg"], ["FILE", ".pyckage"]]}
+{
+    "meta": {
+        "py_min": "3.7",
+        "py_max": "4",
+        "system_platform": "Windows"
+    },
+    "description": null,
+    "version": "0.1.0",
+    "package": "botele",
+    "author": "Pedro Maciel Xavier",
+    "path": "C:\\Users\\Pedro\\gits\\botele",
+    "pathlog": [
+        [
+            "DIR",
+            "C:\\Users\\Pedro\\gits\\botele\\src"
+        ],
+        [
+            "DIR",
+            "C:\\Users\\Pedro\\gits\\botele\\src\\botele"
+        ],
+        [
+            "FILE",
+            "C:\\Users\\Pedro\\gits\\botele\\src\\botele\\__init__.py"
+        ],
+        [
+            "DIR",
+            "C:\\Users\\Pedro\\gits\\botele\\bin"
+        ],
+        [
+            "FILE",
+            "C:\\Users\\Pedro\\gits\\botele\\bin\\botele"
+        ],
+        [
+            "DIR",
+            "C:\\Users\\Pedro\\gits\\botele\\docs"
+        ],
+        [
+            "DIR",
+            "C:\\Users\\Pedro\\gits\\botele\\data"
+        ],
+        [
+            "FILE",
+            "C:\\Users\\Pedro\\gits\\botele\\setup.py"
+        ],
+        [
+            "FILE",
+            "C:\\Users\\Pedro\\gits\\botele\\setup.cfg"
+        ],
+        [
+            "FILE",
+            "C:\\Users\\Pedro\\gits\\botele\\.pyckage"
+        ]
+    ]
+}

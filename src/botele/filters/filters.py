@@ -1,7 +1,7 @@
 from telegram import Message
-from telegram.ext import BaseFilter
+from telegram.ext import MessageFilter
 
-class Mention(BaseFilter):
+class Mention(MessageFilter):
 
     def __init__(self, username):
         self.username = username
