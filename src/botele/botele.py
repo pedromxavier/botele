@@ -18,12 +18,6 @@ from telegram.ext import (
 from pyckage.pyckagelib import PackageData
 from cstream import stderr, stdlog
 
-## Local
-from ..proxy import Proxy
-from ..layer import Layer
-from ..data import Data
-
-
 class BotCallback(object):
     def __init__(self, bot, callback):
         self.bot = bot

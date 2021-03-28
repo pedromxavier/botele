@@ -15,11 +15,10 @@ def setup(args: argparse.Namespace) -> int:
         return 1
 
     if next(path.glob('*'), None) is not None:
-        stdwar[0] << f"`botele setup` should be used in an empty directory. Aborted."
-        return 1
+        stdwar[0] << f"The `botele setup` command should be used in an empty directory. Pay attention to unwanted behavior."
 
     # Data folder
-    path.mkdir("botdata")
+    path.joinpath("botdata").mkdir(exist_ok=True)
 
     # Files
     if args.name is None:
@@ -28,10 +27,10 @@ def setup(args: argparse.Namespace) -> int:
         bot_name: str = args.name
 
     # Create files
-    path.joinpath(f"{bot_name}.token").touch()
-    path.joinpath(f"{bot_name}.py").touch()
+    path.joinpath(f"{bot_name}.token").touch(exist_ok=True)
+    path.joinpath(f"{bot_name}.py").touch(exist_ok=True)
 
-    path.joinpath(".bot").touch()
+    path.joinpath(".bot").touch(exist_ok=True)
 
     bot_data: dict = {
         'name': bot_name,
@@ -42,3 +41,5 @@ def setup(args: argparse.Namespace) -> int:
 
     with open(path.joinpath(".bot"), mode='w') as file:
         json.dump(bot_data, file)
+
+    return 0

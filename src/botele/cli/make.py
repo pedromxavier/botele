@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import argparse
 from pathlib import Path
@@ -7,31 +8,59 @@ from pathlib import Path
 from pyckage.pyckagelib import PackageData
 from cstream import stderr
 
+RE_TOKEN = re.compile(r'^[0-9]{9}\:[a-zA-Z0-9_-]{35}$', re.UNICODE)
+
 def make(args: argparse.Namespace) -> int:
     """
     """
     if args.path is None:
         path = Path.cwd()
     else:
-        if os.path.exists(args.path):
-            path = Path(args.path).absolute()
-        else:
-            stderr[0] << f"Invalid destination folder: `{args.path}`."
+        path = Path(args.path)
+        if not path.exists():
+            stderr[0] << f"Invalid directory `{args.path}`."
             return 1
+        else:
+            path = Path(args.path).absolute()
 
-    bot_path = path.joinpath('.botele')
+    bot_path = path.joinpath('.bot')
 
     if not bot_path.exists():
-        stderr[0] << f"There is an no bot environment here. Use `botele setup` to begin current installation."
+        stderr[0] << f"There is no bot environment here. Use `botele setup` to begin current installation."
         return 1
 
     # Get bot info
     with open(bot_path, mode='r') as file:
         bot_data: dict = json.load(file)
 
-    token_path = Path(bot_data['token_path'])
+    bot_name: str = bot_data['name']
 
-    if token_path is None:
+    # Token
+    token_path = path.joinpath(f'{bot_name}.token')
+
+    if not token_path.exists():
+        stderr[0] << f"No token file `{bot_name}.token`."
+        return 1
+
+    with open(token_path, mode='r') as file:
+        token: str = file.read().strip('\t\n ')
+    
+    if RE_TOKEN.match(token) is None:
+        stderr[0] << f"Invalid token at `{bot_name}.token`."
+        return 1
+
+    # Source
+    source_path = path.joinpath(f'{bot_name}.py')
+
+    if not source_path.exists():
+        stderr[0] << f"No bot source code file `{bot_name}.py`."
+        return 1
+    
+    
+
+
+
+    if token is None:
         stderr[0] << f"No bot token defined. Place it in a `*.token` file."
         return 1
     
