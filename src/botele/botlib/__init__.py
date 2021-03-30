@@ -1,1 +1,1 @@
-from .botlib import load_token, shuffled, start_logging
+from .botlib import root_open, shuffled, start_logging

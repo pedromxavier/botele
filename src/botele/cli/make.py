@@ -1,18 +1,23 @@
 import os
 import re
 import json
+import marshal
 import argparse
+import traceback
 from pathlib import Path
 
 ## Third-Party
 from pyckage.pyckagelib import PackageData
 from cstream import stderr
 
-RE_TOKEN = re.compile(r'^[0-9]{9}\:[a-zA-Z0-9_-]{35}$', re.UNICODE)
+## Local
+from ..botele import Botele
+
+RE_TOKEN = re.compile(r"^[0-9]{10}\:[a-zA-Z0-9_-]{35}$", re.UNICODE)
+
 
 def make(args: argparse.Namespace) -> int:
-    """
-    """
+    """"""
     if args.path is None:
         path = Path.cwd()
     else:
@@ -23,51 +28,83 @@ def make(args: argparse.Namespace) -> int:
         else:
             path = Path(args.path).absolute()
 
-    bot_path = path.joinpath('.bot')
+    bot_path = path.joinpath(".bot")
 
     if not bot_path.exists():
-        stderr[0] << f"There is no bot environment here. Use `botele setup` to begin current installation."
+        stderr[
+            0
+        ] << f"There is no bot environment here. Use `botele setup` to begin current installation."
         return 1
 
     # Get bot info
-    with open(bot_path, mode='r') as file:
+    with open(bot_path, mode="r") as file:
         bot_data: dict = json.load(file)
 
-    bot_name: str = bot_data['name']
+    bot_name: str = bot_data["name"]
 
     # Token
-    token_path = path.joinpath(f'{bot_name}.token')
+    token_path = path.joinpath(f"{bot_name}.token")
 
     if not token_path.exists():
-        stderr[0] << f"No token file `{bot_name}.token`."
+        stderr[0] << f"Error: No token file `{bot_name}.token`."
         return 1
 
-    with open(token_path, mode='r') as file:
-        token: str = file.read().strip('\t\n ')
-    
+    with open(token_path, mode="r") as file:
+        token: str = file.read().strip("\t\n ")
+
     if RE_TOKEN.match(token) is None:
-        stderr[0] << f"Invalid token at `{bot_name}.token`."
+        stderr[0] << f"Error: Invalid token at `{bot_name}.token`."
         return 1
 
     # Source
-    source_path = path.joinpath(f'{bot_name}.py')
+    source_path = path.joinpath(f"{bot_name}.py")
 
     if not source_path.exists():
-        stderr[0] << f"No bot source code file `{bot_name}.py`."
+        stderr[0] << f"Error: No bot source code file `{bot_name}.py`."
         return 1
-    
-    
 
+    with open(source_path, mode="r") as file:
+        source: str = file.read()
 
+    code = compile(source, filename=source_path.name, mode="exec")
 
-    if token is None:
-        stderr[0] << f"No bot token defined. Place it in a `*.token` file."
+    context = {}
+
+    try:
+        exec(code, context)
+    except:
+        stderr[0] << "There are errors in the bot source code:"
+        stderr[0] << traceback.format_exc()
         return 1
-    
-    with open(token_path, mode='r') as file:
-        token: str = file.read()
-    
-    package_data = PackageData('botele')
-    package_path = package_data.get_data_path('')
 
-    package_bots_path = package_path.joinpath('.botele-bots')
+    bots = {
+        key: item
+        for key, item in context.items()
+        if isinstance(item, type) and issubclass(item, Botele) and item is not Botele
+    }
+
+    if len(bots) == 0:
+        stderr[0] << f"Error: No bot defined at `{bot_name}.py`."
+        return 1
+    elif len(bots) >= 2:
+        stderr[0] << f"Error: Multiple bots defined at `{bot_name}.py`."
+        return 1
+
+    pyc_path = path.joinpath(f"{bot_name}.pyc")
+    pyc_path.touch(exist_ok=True)
+
+    with open(pyc_path, mode="wb") as file:
+        marshal.dump(code, file)
+
+    bot_data.update(
+        {
+            "path": str(bot_path),
+            "token": token,
+            "source": str(pyc_path),
+        }
+    )
+
+    with open(bot_path, mode="w") as file:
+        json.dump(bot_data, file)
+
+    return 0

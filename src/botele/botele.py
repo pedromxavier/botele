@@ -378,3 +378,5 @@ class Botele(metaclass=MetaBotele):
     def list_commands(self) -> str:
         """"""
         return "\n".join("{0} - {1}".format(*cmd) for cmd in self.command_list)
+
+__all__ = ['Botele']

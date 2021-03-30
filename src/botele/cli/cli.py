@@ -4,6 +4,7 @@ from .run import run
 from .make import make
 from .list import list_
 from .setup import setup
+from .install import install
 
 from cstream import Stream, stderr, stdwar, stdlog, stdout
 
@@ -51,6 +52,12 @@ def main():
     )
     make_parser.set_defaults(func=make)
 
+    install_parser = subparsers.add_parser("install")
+    install_parser.add_argument(
+        "path", type=str, nargs="?", action="store", help="Bot folder path"
+    )
+    install_parser.set_defaults(func=install)
+
     list_parser = subparsers.add_parser("list")
     list_parser.set_defaults(func=list_)
 
@@ -69,10 +76,10 @@ def main():
         code: int = args.func(args)
 
         if not code:
-            stdlog[0] << f"Botele exited with code {code}."
+            stdlog[1] << f"Botele exited with code {code}."
             return
         else:
-            stderr[0] << f"Botele exited with code {code}."
+            stderr[1] << f"Botele exited with code {code}."
             return
     else:
         parser.print_help(stdout)

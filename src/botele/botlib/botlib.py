@@ -5,6 +5,8 @@ import site
 import random
 import pickle
 import logging
+from pathlib import Path
+from functools import wraps
 
 
 def start_logging(level=logging.DEBUG):
@@ -32,10 +34,32 @@ def shuffled(x: list) -> list:
     return y
 
 
-def load_token(path: str) -> str:
-    """"""
-    if not path.endswith(".token"):
-        raise ValueError(f"Invalid token file path: `{path}`.")
+def root_open(root: str) -> callable:
+    """
+    Parameters
+    ----------
+    root : str
+        Root path for open() reference
 
-    with open(path, mode="r") as file:
-        return file.read()
+    Returns
+    -------
+    callable
+        open(...) function rooted at `root` path.
+    """
+
+    root_path = Path(root).absolute()
+
+    if not root_path.exists() or not root_path.is_dir():
+        raise OSError(f"Invalid folder path `{root_path}`.")
+
+    @wraps(open)
+    def __open(path: str, *args, **kwargs):
+        open_path = root_path.joinpath(path)
+        try:
+            return open(open_path, *args, **kwargs)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"[Errno 2] No such file or directory: '{path}'")
+        except PermissionError:
+            raise PermissionError(f"[Errno 13] Permission denied: '{path}'")
+
+__all__ = ['root_open', 'shuffled', 'start_logging']
