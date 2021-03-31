@@ -80,5 +80,13 @@ def get_bot_context(root: str = None) -> dict:
     else:
         return {"__builtins__": {**__builtins__, "open": root_open(root=root)}}
 
+def file_name(__file__: str) -> str:
+    """
+    Returns
+    -------
+    str
+        Current script file name (without .py, .pyw extensions)
+    """
+    return Path(__file__).stem
 
-__all__ = ["root_open", "get_bot_context", "shuffled", "start_logging"]
+__all__ = ["root_open", "get_bot_context", "shuffled", "start_logging", "file_name"]

@@ -30,7 +30,7 @@ def main():
     subparsers = parser.add_subparsers()
 
     run_parser = subparsers.add_parser("run")
-    run_parser.add_argument("bot", type=str, action="store", help="Bot identifier")
+    run_parser.add_argument("bot", type=str, nargs="+", action="store", help="Bot identifier")
     run_parser.set_defaults(func=run)
 
     setup_parser = subparsers.add_parser("setup")

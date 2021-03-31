@@ -29,7 +29,7 @@ def install(args: argparse.Namespace) -> int:
         return 1
 
     # Get bot info
-    with open(bot_path, mode="r") as file:
+    with open(bot_path, mode="r", encoding='utf-8') as file:
         bot_data: dict = json.load(file)
 
     package_data = PackageData("botele")
@@ -90,12 +90,12 @@ def install(args: argparse.Namespace) -> int:
         }
     )
 
-    with open(bots_file_path, mode="r") as file:
+    with open(bots_file_path, mode="r", encoding='utf-8') as file:
         bots: dict = json.load(file)
 
     bots[bot_name] = bot_data
 
-    with open(bots_file_path, mode="w") as file:
+    with open(bots_file_path, mode="w", encoding='utf-8') as file:
         json.dump(bots, file)
 
     return 0
