@@ -1,8 +1,11 @@
 {
     "cSpell.ignoreWords": [
         "botele",
+        "errno",
         "nargs",
+        "path",
         "pyckage",
-        "pyckagelib"
+        "pyckagelib",
+        "testbot"
     ]
 }

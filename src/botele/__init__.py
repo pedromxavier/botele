@@ -1,2 +1,2 @@
 from .cli import main
-from .botele import Botele
+from .botele import Botele, BoteleMeta

@@ -1,12 +1,14 @@
 import json
 import marshal
 import argparse
+import traceback
+from pathlib import Path
 
 from pyckage.pyckagelib import PackageData
 from cstream import stderr
 
-from ..botele import Botele
-from ..botlib import root_open
+from ..botele import Botele, BoteleMeta
+from ..botlib import get_bot_context
 
 
 def run(args: argparse.Namespace) -> int:
@@ -33,12 +35,47 @@ def run(args: argparse.Namespace) -> int:
 
     bot_data: dict = bots_data[args.bot]
 
-    with open(bot_data['source'], mode='rb') as file:
+    bot_path = Path(bot_data["path"])
+
+    if not bot_path.exists() or not bot_path.is_dir():
+        stderr[0] << (
+            f"Error: Bot directory `{bot_path}` is missing. " + "Try running `botele install`"
+        )
+        return 1
+
+    bot_data_path = bot_path.joinpath("botdata")
+
+    if not bot_path.exists() or not bot_path.is_dir():
+        stderr[0] << (
+            f"Error: Bot data directory is missing. " + "Try running `botele install`"
+        )
+        return 1
+
+    bot_source = Path(bot_data["source"])
+
+    if not bot_source.exists() or not bot_source.is_file():
+        stderr[0] << (
+            f"Error: Bot source file is missing. " + "Try running `botele install`"
+        )
+        return 1
+
+    with open(bot_source, mode="rb") as file:
         code = marshal.load(file)
 
-    context: dict = {'__builtins__': {**__builtins__, 'open': root_open(root=bot_data_path)}}
+    context: dict = get_bot_context(bot_data_path)
 
+    try:
+        exec(code, context)
+    except:
+        stderr[0] << "There are errors in the bot source code:"
+        stderr[0] << traceback.format_exc()
+        return 1
 
-    bot.run(token=token)
+    token: str = bot_data["token"]
+    bot_name: str = bot_data["name"]
 
+    Bot = BoteleMeta.__bots__[bot_name]
+    bot = Bot(name=bot_name, token=token, path=bot_path)
+    bot.setup()
+    bot.run()
     return 0

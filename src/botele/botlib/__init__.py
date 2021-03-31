@@ -1,1 +1,1 @@
-from .botlib import root_open, shuffled, start_logging
+from .botlib import get_bot_context, root_open, shuffled, start_logging

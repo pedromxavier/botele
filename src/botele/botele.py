@@ -16,20 +16,33 @@ from telegram.ext import (
 )
 
 from pyckage.pyckagelib import PackageData
-from cstream import stderr, stdlog
+from cstream import stderr, stdlog, stdwar
+
 
 class BotCallback(object):
-    def __init__(self, bot, callback):
-        self.bot = bot
+    def __init__(self, callback):
         self.callback = callback
+        self.bot = None
 
     def __call__(self, *args, **kwargs):
-        return self.callback(self.bot, self.bot.get_info(*args), **kwargs)
+        if self.bot is not None:
+            return self.callback(self.bot, self.bot.get_info(*args), **kwargs)
+        else:
+            raise ValueError(
+                "Bot instance must be specified through the `.bind(bot) method.`"
+            )
+
+    def bind(self, bot):
+        if isinstance(bot, Botele):
+            self.bot = bot
+            stdlog[3] << f">>> Bound {self} @ {bot}."
+        else:
+            raise TypeError("`bot` must be an instance from `Botele`.")
 
 
 class MessageCallback(BotCallback):
-    def __init__(self, bot, callback, filters: list, *, kwargs: dict = None):
-        BotCallback.__init__(self, bot, callback)
+    def __init__(self, callback, filters: list, *, kwargs: dict = None):
+        BotCallback.__init__(self, callback)
         self.filters = reduce(lambda x, y: x & y, filters)
         self.kwargs = kwargs
 
@@ -37,36 +50,38 @@ class MessageCallback(BotCallback):
 class CommandCallback(BotCallback):
     def __init__(
         self,
-        bot,
         callback,
         command_name: str,
         description: str = None,
         *,
         kwargs: dict = None,
     ):
-        BotCallback.__init__(self, bot, callback)
-        self.command_name = command_name
+        BotCallback.__init__(self, callback)
+        self.name = command_name
         self.description = description
         self.kwargs = kwargs
 
 
 class QueryCallback(BotCallback):
-    def __init__(self, bot, callback, pattern: str = None):
-        BotCallback.__init__(self, bot, callback)
+    def __init__(self, callback, pattern: str = None):
+        BotCallback.__init__(self, callback)
         self.pattern = pattern
 
 
 class ErrorCallback(BotCallback):
-    def __init__(self, bot, callback):
-        BotCallback.__init__(self, bot, callback)
+    def __init__(self, callback):
+        BotCallback.__init__(self, callback)
 
 
-class MetaBotele(type):
+class BoteleMeta(type):
     """"""
+
+    __bots__ = {}
 
     def __new__(cls, name: str, bases: tuple, attrs: dict):
         cls.get_handlers(attrs)
-        return super().__new__(cls, name, bases, attrs)
+        cls.__bots__[name.lower()] = super().__new__(cls, name, bases, attrs)
+        return cls.__bots__[name.lower()]
 
     @classmethod
     def get_handlers(cls, attrs: dict):
@@ -79,14 +94,15 @@ class MetaBotele(type):
         for name, item in attrs.items():
             if isinstance(item, CommandCallback):
                 command_handlers.append(item)
-                # Commands handled by functions which name is started with '_' are ignored.
+                # Commands handled by functions which name is started with '_' are not added
+                # to the bot command list.
                 if not name.startswith("_"):
                     command_list.append((item.name, item.description))
-            if isinstance(item, MessageCallback):
+            elif isinstance(item, MessageCallback):
                 message_handlers.append(item)
-            if isinstance(item, MessageCallback):
+            elif isinstance(item, QueryCallback):
                 query_handlers.append(item)
-            if isinstance(item, ErrorCallback):
+            elif isinstance(item, ErrorCallback):
                 # Adds the latest defined error handler
                 error_handler = item
 
@@ -101,7 +117,7 @@ class MetaBotele(type):
         )
 
 
-class Botele(metaclass=MetaBotele):
+class Botele(metaclass=BoteleMeta):
 
     package_data = PackageData("botele")
 
@@ -116,27 +132,25 @@ class Botele(metaclass=MetaBotele):
 
     __data__ = {}
 
-    def __init__(self, token: str, name: str, path: str, *, source: str = None):
+    def __init__(self, name: str, token: str, path: str):
         self.__name = name
-        self.__path = Path(path)
         self.__token = token
-        self.__source = source
+        self.__path = Path(path).absolute()
 
     @property
-    def source(self) -> Path:
-        return None if self.__source is None else Path(self.__source)
-
-    @property
-    def name(self) -> str:
-        return self.__name
-
-    @property
-    def path(self) -> Path:
-        return self.__path
+    def package_path(self) -> Path:
+        """"""
+        return self.package_data.get_data_path("")
 
     @property
     def token(self) -> str:
+        """"""
         return self.__token
+
+    @property
+    def path(self) -> Path:
+        """"""
+        return self.__path
 
     def setup(self):
         ## Setup Updater
@@ -160,7 +174,7 @@ class Botele(metaclass=MetaBotele):
             else:
                 stdlog[0] << "> Started Polling."
         except KeyboardInterrupt:
-            stderr[1] << "Keyboard Interrupt"
+            stdwar[1] << "Keyboard Interrupt"
             return
         finally:
             if idle:
@@ -177,20 +191,7 @@ class Botele(metaclass=MetaBotele):
         except:
             stderr[1] << "> Failed to stop bot."
 
-    @classmethod
-    def load(cls, data: dict):
-        """"""
-        return cls(**data)
-
-    def save(self) -> dict:
-        return {
-            "name": self.name,
-            "path": self.path,
-            "token": self.token,
-            "source": self.source,
-        }
-
-    def get_data_path(self) -> str:
+    def get_data_path(self) -> Path:
         """"""
         data_path = self.path.joinpath(".bot-data")
 
@@ -225,7 +226,12 @@ class Botele(metaclass=MetaBotele):
         self.add_error_handler()
 
     def add_command_handlers(self):
+        """"""
+        cmd: CommandCallback
         for cmd in self.command_handlers:
+            ## Bind to this bot
+            cmd.bind(self)
+
             ## Create Handler Object
             handler = CommandHandler(cmd.name, cmd, **cmd.kwargs)
 
@@ -235,17 +241,26 @@ class Botele(metaclass=MetaBotele):
             stdlog[3] << f"> Add Command Handler: /{cmd.name} @{cmd}"
 
     def add_message_handlers(self):
+        msg: MessageCallback
         for msg in self.message_handlers:
-            ## Create Handler Object
+            # Bind to this bot
+            msg.bind(self)
+
+            # Create Handler Object
             handler = MessageHandler(msg.filters, msg, **msg.kwargs)
 
-            ## Add Handler to Dispatcher
+            # Add Handler to Dispatcher
             self.dispatcher.add_handler(handler)
 
             stdlog[3] << f"> Add Message Handler: [{msg.filters}] @{msg}"
 
     def add_query_handlers(self):
+        """"""
+        query: QueryCallback
         for query in self.query_handlers:
+            # Bind to this bot
+            query.bind(self)
+
             if query.pattern is None:
                 handler = CallbackQueryHandler(query)
             else:
@@ -257,8 +272,15 @@ class Botele(metaclass=MetaBotele):
             stdlog[3] << f"> Add Query Handler: [{query.pattern}] @{query}"
 
     def add_error_handler(self):
+        """"""
+        self.error_handler: ErrorCallback
         if self.error_handler is not None:
+            # Bind to this bot
+            self.error_handler.bind(self)
+
+            # Add Error Handler to Dispatcher
             self.dispatcher.add_error_handler(self.error_handler)
+            
             stdlog[3] << f"> Add Error Handler: @{self.error_handler}"
 
     @classmethod
@@ -337,9 +359,7 @@ class Botele(metaclass=MetaBotele):
         """"""
 
         def decor(callback):
-            return CommandCallback(
-                cls, callback, command_name, description, kwargs=kwargs
-            )
+            return CommandCallback(callback, command_name, description, kwargs=kwargs)
 
         return decor
 
@@ -348,7 +368,7 @@ class Botele(metaclass=MetaBotele):
         """"""
 
         def decor(callback):
-            return MessageCallback(cls, callback, filters, kwargs=kwargs)
+            return MessageCallback(callback, filters, kwargs=kwargs)
 
         return decor
 
@@ -363,13 +383,13 @@ class Botele(metaclass=MetaBotele):
         #     pattern = None
         #     regex = re.compile('.*')
         def decor(callback: callable) -> callable:
-            return QueryCallback(cls, callback, None)
+            return QueryCallback(callback, None)
 
         return decor
 
     @classmethod
     def error(cls, callback):
-        return ErrorCallback(cls, callback)
+        return ErrorCallback(callback)
 
     @property
     def username(self):
@@ -379,4 +399,5 @@ class Botele(metaclass=MetaBotele):
         """"""
         return "\n".join("{0} - {1}".format(*cmd) for cmd in self.command_list)
 
-__all__ = ['Botele']
+
+__all__ = ["Botele", "BoteleMeta"]

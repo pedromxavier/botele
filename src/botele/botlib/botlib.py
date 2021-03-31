@@ -62,4 +62,23 @@ def root_open(root: str) -> callable:
         except PermissionError:
             raise PermissionError(f"[Errno 13] Permission denied: '{path}'")
 
-__all__ = ['root_open', 'shuffled', 'start_logging']
+
+def get_bot_context(root: str = None) -> dict:
+    """
+    Parameters
+    ----------
+    root : str
+        Root path for open() reference
+
+    Returns
+    -------
+    dict
+        global context dictionary
+    """
+    if root is None:
+        return {}
+    else:
+        return {"__builtins__": {**__builtins__, "open": root_open(root=root)}}
+
+
+__all__ = ["root_open", "get_bot_context", "shuffled", "start_logging"]

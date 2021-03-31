@@ -68,16 +68,27 @@ def install(args: argparse.Namespace) -> int:
         stderr[0] << f"Path Error: `botdata` must be a directory."
         return 1
 
-    shutil.copy(src_path, bot_dir_path.joinpath(src_path.name))
+    bot_src_path = bot_dir_path.joinpath(src_path.name)
+
+    shutil.copy(src_path, bot_src_path)
+
+    bot_data_path = bot_dir_path.joinpath("botdata")
 
     if data_path is not None:
-        shutil.copytree(data_path, bot_dir_path.joinpath("botdata"))
+        shutil.copytree(data_path, bot_data_path)
 
     bots_file_path = package_path.joinpath(".botele-bots")
 
     if not bots_file_path.exists():
         stderr[0] << "Fatal Error: Internal files missing. Try reinstalling botele."
         return 2
+
+    bot_data.update(
+        {
+            "path": str(bot_dir_path),
+            "source": str(bot_src_path),
+        }
+    )
 
     with open(bots_file_path, mode="r") as file:
         bots: dict = json.load(file)

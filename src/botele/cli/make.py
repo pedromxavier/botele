@@ -8,10 +8,11 @@ from pathlib import Path
 
 ## Third-Party
 from pyckage.pyckagelib import PackageData
-from cstream import stderr
+from cstream import stderr, stdwar
 
 ## Local
 from ..botele import Botele
+from ..botlib import get_bot_context
 
 RE_TOKEN = re.compile(r"^[0-9]{10}\:[a-zA-Z0-9_-]{35}$", re.UNICODE)
 
@@ -28,16 +29,16 @@ def make(args: argparse.Namespace) -> int:
         else:
             path = Path(args.path).absolute()
 
-    bot_path = path.joinpath(".bot")
+    bot_data_path = path.joinpath(".bot")
 
-    if not bot_path.exists():
+    if not bot_data_path.exists():
         stderr[
             0
         ] << f"There is no bot environment here. Use `botele setup` to begin current installation."
         return 1
 
     # Get bot info
-    with open(bot_path, mode="r") as file:
+    with open(bot_data_path, mode="r") as file:
         bot_data: dict = json.load(file)
 
     bot_name: str = bot_data["name"]
@@ -68,7 +69,7 @@ def make(args: argparse.Namespace) -> int:
 
     code = compile(source, filename=source_path.name, mode="exec")
 
-    context = {}
+    context = get_bot_context(root=None)
 
     try:
         exec(code, context)
@@ -90,6 +91,15 @@ def make(args: argparse.Namespace) -> int:
         stderr[0] << f"Error: Multiple bots defined at `{bot_name}.py`."
         return 1
 
+    BotName, BotClass = bots.popitem()
+
+    if BotName.lower() != bot_name:
+        stderr[0] << f"Bot Class name must be equal to the bot name, ignoring case."
+        return 1
+
+    if BotClass.error_handler is None:
+        stdwar[0] << f"No Error Handler defined for bot `{BotName}`."
+
     pyc_path = path.joinpath(f"{bot_name}.pyc")
     pyc_path.touch(exist_ok=True)
 
@@ -98,13 +108,13 @@ def make(args: argparse.Namespace) -> int:
 
     bot_data.update(
         {
-            "path": str(bot_path),
+            "path": str(path),
             "token": token,
             "source": str(pyc_path),
         }
     )
 
-    with open(bot_path, mode="w") as file:
+    with open(bot_data_path, mode="w") as file:
         json.dump(bot_data, file)
 
     return 0
