@@ -1,63 +1,78 @@
+# Standard Library
 import json
 import argparse
 import traceback
+import subprocess as sp
 import multiprocessing as mp
 from pathlib import Path
 
+# Third-Party
 from pyckage.pyckagelib import PackageData
-from cstream import stderr
+from cstream import stderr, stdwar
 
+from .list_ import list_bots
+from ..botlib import get_bot_data, ProcessData
 
 def run(args: argparse.Namespace) -> int:
-    """"""
+    """
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Command-line arguments:
+        .bot: list
+            List of strings with bot identifiers.
+        .all: bool
+            Wether to run all alive bots or not.
+    """
+    args.bot: list
+    args.all: bool
+
+    if bool(args.bot) and args.all:
+        stderr[0] << "Error: '--all' can't be used with any bot identifier as argument."
+        return 1
+
+    if args.all:
+        bot_keys = set(list_bots())
+    elif bool(args.bot):
+        bot_keys = set(args.bot)
+    else:
+        stderr[0] << "Not bot identifier provided."
+        return 1
+
+    for bot_key in list(bot_keys):
+        if not check_bot(bot_key):
+            bot_keys.discard(bot_key)
+
+    if not bool(bot_keys):
+        return 0
 
     package_data = PackageData("botele")
     package_path = package_data.get_data_path("")
+    process_path = package_path.joinpath("pid")
+    process_data = ProcessData(process_path)
 
-    bots_path = package_path.joinpath(".botele-bots")
+    if args.wait:
+        processes = []
+        for bot_key in list(bot_keys):
+            process = mp.Process(target=run_bot, args=(bot_key,))
+            processes.append((bot_key, process))
+        for pkey, process in processes:
+            process.start()
+            process_data.dump_data(pkey, process.pid)
+        for _, process in processes:
+            process.join()
+    return 0
 
-    if not bots_path.exists():
-        stderr[0] << "Fatal Error: Bots index missing. Try reinstalling botele."
-        return 1
-
-    with open(bots_path, mode="r") as file:
-        bots_data: dict = json.load(file)
-
-    problems = False
-
-    bot_name: str
-    for bot_name in args.bot:
-        if bot_name not in bots_data:
-            stderr[0] << f"Error: Unknown bot `{bot_name}`."
-            problems = True
-
-    if problems:
-        stderr[0] << "Run `botele list` to see available bots."
-        return 1
-
-    bots = []
-
-    for bot_name in args.bot:
-        bot_data: dict = bots_data[bot_name]
-        if not check_bot(bot_data):
-            stderr[0] << f"There are problems with {bot_name}'s installation."
-            problems = True
-        elif not problems:
-            bots.append(bot_data)
-        else:
-            continue
-
-    if problems:
-        return 1
-
-    # Here things get interesting. Multiprocessing arises!
-    p = [mp.Process(target=check_bot, args=(bot_data,)) for bot_data in bots]
-
-
-def check_bot(bot_data: dict) -> bool:
+def check_bot(bot_key: str) -> bool:
     """"""
 
-    bot_path = Path(bot_data["path"])
+    bot_data: dict = get_bot_data(bot_key)
+
+    if bot_data is None:
+        stderr[0] << f"Bot '{bot_key}' is not properly installed."
+        return False
+
+    bot_path: Path = Path(bot_data["path"])
 
     if not bot_path.exists() or not bot_path.is_dir():
         stderr[0] << (
@@ -87,10 +102,14 @@ def check_bot(bot_data: dict) -> bool:
     return True
 
 
-def run_bot(bot_data: dict):
+def run_bot(bot_key: str) -> int:
+    """"""
     import marshal
+    from pathlib import Path
     from ..botele import Botele, BoteleMeta
-    from ..botlib import get_bot_context
+    from ..botlib import get_bot_context, get_bot_data
+
+    bot_data: dict = get_bot_data(bot_key)
 
     bot_source = Path(bot_data["source"])
 

@@ -1,15 +1,24 @@
 ## Standard Library
 import os
+import re
 import sys
 import site
-import random
+import json
 import pickle
-import logging
+import psutil
+import random
 from pathlib import Path
 from functools import wraps
 
+from pyckage.pyckagelib import PackageData
 
-def start_logging(level=logging.DEBUG):
+
+def start_logging(level: int=None):
+    global logging
+    import logging
+
+    level = logging.DEBUG if logging is None else level
+
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         level=level,
@@ -80,6 +89,7 @@ def get_bot_context(root: str = None) -> dict:
     else:
         return {"__builtins__": {**__builtins__, "open": root_open(root=root)}}
 
+
 def file_name(__file__: str) -> str:
     """
     Returns
@@ -89,4 +99,39 @@ def file_name(__file__: str) -> str:
     """
     return Path(__file__).stem
 
-__all__ = ["root_open", "get_bot_context", "shuffled", "start_logging", "file_name"]
+
+def get_bot_data(bot_key: str) -> dict:
+    """"""
+    package_data = PackageData("botele")
+    package_path = package_data.get_data_path("")
+
+    data_path = package_path.joinpath(".botele-bots")
+
+    if not data_path.exists():
+        return None
+
+    with open(data_path, mode='r') as file:
+        bots_data = json.load(file)
+
+    if bot_key not in bots_data:
+        return None
+    else:
+        return bots_data[bot_key]
+
+def set_bot_data(bot_key: str, bot_data: dict) -> dict:
+    """"""
+    package_data = PackageData("botele")
+    package_path = package_data.get_data_path("")
+    
+    data_path = package_path.joinpath(".botele-bots")
+
+    if data_path.exists():
+        with open(data_path, mode='r') as file:
+            bots_data = json.load(file)
+    else:
+        bots_data = {}
+    
+    bots_data[bot_key] = bot_data
+
+    with open(data_path, mode='w') as file:
+        json.dump(bots_data, file)

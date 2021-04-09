@@ -5,7 +5,7 @@ from pathlib import Path
 from functools import wraps, reduce
 
 ## Third-Party
-from telegram import Update
+from telegram import Update, Message
 from telegram import ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, Filters, CallbackContext
 from telegram.ext import (
@@ -86,6 +86,8 @@ class BoteleMeta(type):
     @classmethod
     def get_handlers(cls, attrs: dict):
         command_list = []
+        _command_list = []
+        __command_list = []
         command_handlers = []
         message_handlers = []
         query_handlers = []
@@ -96,7 +98,11 @@ class BoteleMeta(type):
                 command_handlers.append(item)
                 # Commands handled by functions which name is started with '_' are not added
                 # to the bot command list.
-                if not name.startswith("_"):
+                if name.startswith("__"):
+                    __command_list.append((item.name, item.description))
+                if name.startswith("_"):
+                    _command_list.append((item.name, item.description))
+                else:
                     command_list.append((item.name, item.description))
             elif isinstance(item, MessageCallback):
                 message_handlers.append(item)
@@ -109,6 +115,8 @@ class BoteleMeta(type):
         attrs.update(
             {
                 "command_list": command_list,
+                "_command_list": _command_list,
+                "__command_list": __command_list,
                 "command_handlers": command_handlers,
                 "message_handlers": message_handlers,
                 "query_handlers": query_handlers,
@@ -125,6 +133,8 @@ class Botele(metaclass=BoteleMeta):
     MARKDOWN = ParseMode.MARKDOWN_V2
 
     command_list = []
+    _command_list = []
+    __command_list = []
     command_handlers = []
     message_handlers = []
     query_handlers = []
@@ -161,7 +171,7 @@ class Botele(metaclass=BoteleMeta):
         self.dispatcher = self.updater.dispatcher
 
         ## Add Handlers
-        self.add_handlers()
+        self._add_handlers()
         stdlog[1] << "> Handlers added"
 
     def run(self, idle: bool = True):
@@ -174,24 +184,24 @@ class Botele(metaclass=BoteleMeta):
             else:
                 stdlog[0] << "> Started Polling."
         except KeyboardInterrupt:
-            stdwar[1] << "Keyboard Interrupt"
+            stdwar[0] << "Keyboard Interrupt"
             return
         finally:
             if idle:
-                if self.updater.running:
-                    self.updater.stop()
-                stdlog[0] << "> Stopped"
+                self.stop()
             else:
                 stdlog[0] << "> remember calling 'bot.stop()' afterwards."
 
     def stop(self):
         try:
-            stdlog[1] << "> Stopping bot."
-            return self.updater.stop()
+            if self.updater.running:
+                stdlog[1] << "> Stopping bot."
+                self.updater.stop()
+                stdlog[0] << "> Stopped"
         except:
             stderr[1] << "> Failed to stop bot."
 
-    def get_data_path(self) -> Path:
+    def _get_data_path(self) -> Path:
         """"""
         data_path = self.path.joinpath(".bot-data")
 
@@ -200,32 +210,32 @@ class Botele(metaclass=BoteleMeta):
         else:
             return data_path
 
-    def load_data(self):
+    def _load_data(self):
         """"""
-        with open(self.get_data_path(), mode="r") as file:
+        with open(self._get_data_path(), mode="r") as file:
             self.__data__.update(json.load(file))
 
-    def save_data(self):
+    def _save_data(self):
         """"""
-        with open(self.get_data_path(), mode="w") as file:
+        with open(self._get_data_path(), mode="w") as file:
             json.dump(self.__data__, file)
 
     ## Context Management
     def __enter__(self, *args, **kwargs):
-        self.load_data()
+        self._load_data()
         return self
 
     def __exit__(self, *args, **kwargs):
-        self.save_data()
+        self._save_data()
 
     ## Event Handlers
-    def add_handlers(self):
-        self.add_command_handlers()
-        self.add_message_handlers()
-        self.add_query_handlers()
-        self.add_error_handler()
+    def _add_handlers(self):
+        self._add_command_handlers()
+        self._add_message_handlers()
+        self._add_query_handlers()
+        self._add_error_handler()
 
-    def add_command_handlers(self):
+    def _add_command_handlers(self):
         """"""
         cmd: CommandCallback
         for cmd in self.command_handlers:
@@ -240,7 +250,7 @@ class Botele(metaclass=BoteleMeta):
 
             stdlog[3] << f"> Add Command Handler: /{cmd.name} @{cmd}"
 
-    def add_message_handlers(self):
+    def _add_message_handlers(self):
         msg: MessageCallback
         for msg in self.message_handlers:
             # Bind to this bot
@@ -254,7 +264,7 @@ class Botele(metaclass=BoteleMeta):
 
             stdlog[3] << f"> Add Message Handler: [{msg.filters}] @{msg}"
 
-    def add_query_handlers(self):
+    def _add_query_handlers(self):
         """"""
         query: QueryCallback
         for query in self.query_handlers:
@@ -271,7 +281,7 @@ class Botele(metaclass=BoteleMeta):
 
             stdlog[3] << f"> Add Query Handler: [{query.pattern}] @{query}"
 
-    def add_error_handler(self):
+    def _add_error_handler(self):
         """"""
         self.error_handler: ErrorCallback
         if self.error_handler is not None:
@@ -280,7 +290,7 @@ class Botele(metaclass=BoteleMeta):
 
             # Add Error Handler to Dispatcher
             self.dispatcher.add_error_handler(self.error_handler)
-            
+
             stdlog[3] << f"> Add Error Handler: @{self.error_handler}"
 
     @classmethod
@@ -390,10 +400,6 @@ class Botele(metaclass=BoteleMeta):
     @classmethod
     def error(cls, callback):
         return ErrorCallback(callback)
-
-    @property
-    def username(self):
-        return self.updater.bot.name
 
     def list_commands(self) -> str:
         """"""

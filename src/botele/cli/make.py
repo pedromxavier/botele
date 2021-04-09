@@ -32,9 +32,9 @@ def make(args: argparse.Namespace) -> int:
     bot_data_path = path.joinpath(".bot")
 
     if not bot_data_path.exists():
-        stderr[
-            0
-        ] << f"There is no bot environment here. Use `botele setup` to begin current installation."
+        stderr[0] << (
+            f"There is no bot environment here. Use `botele setup` to begin current installation."
+        )
         return 1
 
     # Get bot info
@@ -64,7 +64,7 @@ def make(args: argparse.Namespace) -> int:
         stderr[0] << f"Error: No bot source code file `{bot_name}.py`."
         return 1
 
-    with open(source_path, mode="r", encoding='utf-8') as file:
+    with open(source_path, mode="r", encoding="utf-8") as file:
         source: str = file.read()
 
     code = compile(source, filename=source_path.name, mode="exec")
@@ -114,7 +114,7 @@ def make(args: argparse.Namespace) -> int:
         }
     )
 
-    with open(bot_data_path, mode="w", encoding='utf-8') as file:
+    with open(bot_data_path, mode="w", encoding="utf-8") as file:
         json.dump(bot_data, file)
 
     return 0

@@ -19,9 +19,9 @@ def install(args: argparse.Namespace) -> int:
         else:
             path = Path(args.path).absolute()
 
-    bot_path = path.joinpath(".bot").absolute()
+    local_bot_path = path.joinpath(".bot").absolute()
 
-    if not bot_path.exists():
+    if not local_bot_path.exists():
         stderr[0] << (
             "Path Error: There is no bot environment here. "
             + "Use `botele setup` to begin current installation."
@@ -29,7 +29,7 @@ def install(args: argparse.Namespace) -> int:
         return 1
 
     # Get bot info
-    with open(bot_path, mode="r", encoding='utf-8') as file:
+    with open(local_bot_path, mode="r", encoding='utf-8') as file:
         bot_data: dict = json.load(file)
 
     package_data = PackageData("botele")
@@ -40,6 +40,7 @@ def install(args: argparse.Namespace) -> int:
     if not bots_dir_path.exists():
         bots_dir_path.mkdir(exist_ok=False)
 
+    ## Bot install folder
     bot_name: str = bot_data["name"]
 
     bot_dir_path = bots_dir_path.joinpath(bot_name)
@@ -50,52 +51,57 @@ def install(args: argparse.Namespace) -> int:
 
     bot_dir_path.mkdir(exist_ok=False)
 
-    src_path = Path(bot_data["source"])
+    ## Bot local source path
+    local_src_path = Path(bot_data["source"])
 
-    if not src_path.exists():
+    if not local_src_path.exists():
         stderr[0] << (
-            f"Path Error: Compiled source `{src_path}` is missing. "
+            f"Path Error: Compiled source `{local_src_path}` is missing. "
             + "Try running `botele make`."
         )
         return 1
 
+    ## Bot local data path.
     data_path = path.joinpath("botdata")
 
     if not data_path.exists():
         stdwar[0] << f"Warning: No `botdata` folder found."
         data_path = None
     elif not data_path.is_dir():
-        stderr[0] << f"Path Error: `botdata` must be a directory."
+        stderr[0] << f"Error: `botdata` must be a directory."
         return 1
 
-    bot_src_path = bot_dir_path.joinpath(src_path.name)
+    ## Bot install source path
+    install_src_path = bot_dir_path.joinpath(local_src_path.name)
 
-    shutil.copy(src_path, bot_src_path)
+    shutil.copy(local_src_path, install_src_path)
 
-    bot_data_path = bot_dir_path.joinpath("botdata")
+    install_data_path = bot_dir_path.joinpath("botdata")
 
     if data_path is not None:
-        shutil.copytree(data_path, bot_data_path)
+        shutil.copytree(data_path, install_data_path)
+    else:
+        install_data_path.mkdir()
 
-    bots_file_path = package_path.joinpath(".botele-bots")
+    bots_data_path = package_path.joinpath(".botele-bots")
 
-    if not bots_file_path.exists():
+    if not bots_data_path.exists():
         stderr[0] << "Fatal Error: Internal files missing. Try reinstalling botele."
         return 2
 
     bot_data.update(
         {
             "path": str(bot_dir_path),
-            "source": str(bot_src_path),
+            "source": str(install_src_path),
         }
     )
 
-    with open(bots_file_path, mode="r", encoding='utf-8') as file:
-        bots: dict = json.load(file)
+    with open(bots_data_path, mode="r", encoding='utf-8') as file:
+        bots_data: dict = json.load(file)
 
-    bots[bot_name] = bot_data
+    bots_data[bot_name] = bot_data
 
-    with open(bots_file_path, mode="w", encoding='utf-8') as file:
-        json.dump(bots, file)
+    with open(bots_data_path, mode="w", encoding='utf-8') as file:
+        json.dump(bots_data, file)
 
     return 0

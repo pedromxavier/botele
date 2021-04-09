@@ -1,6 +1,7 @@
 import traceback
 import lorem
 import re
+import time
 from random import randint
 
 from telegram import Message, MessageEntity
@@ -40,12 +41,23 @@ class GremioEciBot(Botele):
         }
         return info["bot"].send_message(**params)
 
+    @Botele.command("pipoco", "Faz um estouro.")
+    def pipoco(self, info: dict):
+        stdout[2] << f"> /comandos from @{info['username']}"
+        for _ in range(randint(3,5)):
+            params = {
+                "chat_id": info["chat_id"],
+                "text": f"{'T' * randint(1,3)}{'E' * randint(5, 8)}{'I' * randint(2,4)}{'!'*randint(1,3)}",
+            }
+            info["bot"].send_message(**params)
+            time.sleep(0.3)
+
     @Botele.command("lista")
     def _lista(self, info):
         stdout[2] << f"> /lista from @{info['username']}"
         params = {
             "chat_id": info["chat_id"],
-            "text": self.list_commands(),
+            "text": self._list_commands(),
         }
         return info["bot"].send_message(**params)
 
